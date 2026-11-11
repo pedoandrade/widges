@@ -13,4 +13,5 @@
     android:widgetCategory="home_screen"
     android:configure="com.pedro.widgets.widget.photo.PhotoConfigActivity"
     android:widgetFeatures="reconfigurable"
-    android:updatePeriodMillis="0" />
+    android:updatePeriodMillis="0"
+    android:previewImage="@drawable/widget_retrato_preview" />
