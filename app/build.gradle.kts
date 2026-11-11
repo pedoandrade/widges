@@ -104,5 +104,8 @@ dependencies {
     // Coil for efficient image loading
     implementation(libs.coil.compose)
 
+    // Material Components – provides Theme.Material3.* XML themes
+    implementation(libs.material)
+
     debugImplementation(libs.androidx.ui.tooling)
 }
