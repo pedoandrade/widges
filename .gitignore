@@ -7,11 +7,17 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
 .DS_Store
 /build
 */build
 .cxx
 Captures
+
+# Node / build scripts (not part of Android project)
+node_modules/
+convert_icon.js
 
 # Keystore secrets – never commit these
 keystore.properties
