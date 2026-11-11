@@ -12,3 +12,8 @@
 */build
 .cxx
 Captures
+
+# Keystore secrets – never commit these
+keystore.properties
+keystore/*.keystore
+keystore/*.jks
