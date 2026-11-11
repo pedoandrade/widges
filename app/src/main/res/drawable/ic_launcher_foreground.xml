@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stylized Widget Frame -->
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M30,24 h48 a10,10 0 0 1 10,10 v40 a10,10 0 0 1 -10,10 h-48 a10,10 0 0 1 -10,-10 v-40 a10,10 0 0 1 10,-10 z"/>
+    <!-- Inner Accent -->
+    <path
+        android:fillColor="#381E72"
+        android:pathData="M34,34 h40 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-40 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 z"/>
+    <path
+        android:fillColor="#4F378B"
+        android:pathData="M34,60 h22 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-22 a4,4 0 0 1 -4,-4 v-10 a4,4 0 0 1 4,-4 z"/>
+    <path
+        android:fillColor="#4F378B"
+        android:pathData="M62,60 h12 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-12 a4,4 0 0 1 -4,-4 v-10 a4,4 0 0 1 4,-4 z"/>
+</vector>
