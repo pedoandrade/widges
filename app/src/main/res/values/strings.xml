@@ -2,6 +2,8 @@
     <string name="app_name">Widgets</string>
     <string name="calendar_widget_name">Agenda Dinâmica</string>
     <string name="calendar_widget_description">Widget personalizável sincronizado com a sua Agenda Google com controle de transparência, bordas e Material You.</string>
+    <string name="calendar_widget_missing">Adicione o widget de agenda à tela inicial antes de personalizá-lo.</string>
     <string name="photo_widget_name">Porta-Retratos</string>
     <string name="photo_widget_description">Widget de fotos com formatos personalizados, molduras e suporte a múltiplas imagens.</string>
+    <string name="photo_widget_missing">Adicione o widget de fotos à tela inicial antes de personalizá-lo.</string>
 </resources>

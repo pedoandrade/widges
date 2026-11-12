@@ -5,12 +5,17 @@ import android.content.Context
 import android.content.Intent
 import android.provider.CalendarContract
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -37,12 +42,13 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.pedro.widgets.MainActivity
+import com.pedro.widgets.R
 import com.pedro.widgets.data.model.CalendarEvent
 import com.pedro.widgets.data.model.CalendarViewMode
 import com.pedro.widgets.data.model.CalendarWidgetConfig
 import com.pedro.widgets.data.repository.CalendarRepository
 import com.pedro.widgets.data.storage.WidgetPreferences
+import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -53,13 +59,14 @@ class CalendarWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val prefs = WidgetPreferences(context)
-        val config = prefs.getCalendarConfig(appWidgetId)
+        val configFlow = prefs.calendarConfigFlow(appWidgetId)
+        val initialConfig = configFlow.first()
         val repository = CalendarRepository(context)
 
         val hasPermission = repository.hasCalendarPermission()
         val events = if (hasPermission) {
             repository.getUpcomingEvents(
-                maxEvents = config.maxEvents,
+                maxEvents = initialConfig.maxEvents,
                 includePastToday = true
             )
         } else {
@@ -67,6 +74,10 @@ class CalendarWidget : GlanceAppWidget() {
         }
 
         provideContent {
+            // Observa o DataStore dentro da composição. Assim, mudanças de opacidade e aparência
+            // aparecem na hora, mesmo que a sessão do Glance já esteja ativa.
+            val config by configFlow.collectAsState(initial = initialConfig)
+
             GlanceTheme {
                 CalendarWidgetContent(
                     context = context,
@@ -97,13 +108,16 @@ fun CalendarWidgetContent(
     hasPermission: Boolean
 ) {
     val backgroundColor = if (config.useDynamicColors) {
-        GlanceTheme.colors.surface.getColor(context).copy(alpha = config.backgroundAlpha)
+        // widgetBackground is Glance's Material You widget token. Unlike `surface` (a neutral
+        // near-black/near-white tone), it follows the accent palette derived from the user's
+        // wallpaper and themed icons.
+        GlanceTheme.colors.widgetBackground.getColor(context).copy(alpha = config.backgroundAlpha)
     } else {
         Color(config.backgroundColor).copy(alpha = config.backgroundAlpha)
     }
 
     val primaryTextColor = if (config.useDynamicColors) {
-        GlanceTheme.colors.onSurface
+        GlanceTheme.colors.onSecondaryContainer
     } else {
         androidx.glance.unit.ColorProvider(Color.White)
     }
@@ -120,6 +134,8 @@ fun CalendarWidgetContent(
         androidx.glance.unit.ColorProvider(Color(0xFFD0BCFF))
     }
 
+    val refreshButtonBackground = secondaryTextColor.getColor(context).copy(alpha = 0.10f)
+
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -134,7 +150,8 @@ fun CalendarWidgetContent(
             CalendarHeader(
                 primaryTextColor = primaryTextColor,
                 secondaryTextColor = secondaryTextColor,
-                accentColor = accentColor
+                accentColor = accentColor,
+                refreshButtonBackground = refreshButtonBackground
             )
 
             Spacer(modifier = GlanceModifier.height(10.dp))
@@ -173,7 +190,8 @@ fun CalendarWidgetContent(
 private fun CalendarHeader(
     primaryTextColor: androidx.glance.unit.ColorProvider,
     secondaryTextColor: androidx.glance.unit.ColorProvider,
-    accentColor: androidx.glance.unit.ColorProvider
+    accentColor: androidx.glance.unit.ColorProvider,
+    refreshButtonBackground: Color
 ) {
     val now = Date()
     val dayOfWeekFormat = SimpleDateFormat("EEEE", Locale("pt", "BR"))
@@ -228,13 +246,17 @@ private fun CalendarHeader(
         // Botão de Atualizar / Sincronizar
         Box(
             modifier = GlanceModifier
-                .cornerRadius(14.dp)
-                .padding(6.dp)
-                .clickable(actionRunCallback<RefreshCalendarActionCallback>())
+                .size(30.dp)
+                .cornerRadius(15.dp)
+                .background(refreshButtonBackground)
+                .clickable(actionRunCallback<RefreshCalendarActionCallback>()),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "🔄",
-                style = TextStyle(fontSize = 14.sp)
+            Image(
+                provider = ImageProvider(R.drawable.ic_refresh),
+                contentDescription = "Atualizar agenda",
+                colorFilter = ColorFilter.tint(secondaryTextColor),
+                modifier = GlanceModifier.size(16.dp)
             )
         }
     }
@@ -407,14 +429,23 @@ private fun EmptyEventsNotice(
                 )
             )
             Spacer(modifier = GlanceModifier.height(4.dp))
-            Text(
-                text = "Toque para sincronizar 🔄",
-                style = TextStyle(
-                    color = accentColor,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    provider = ImageProvider(R.drawable.ic_refresh),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(accentColor),
+                    modifier = GlanceModifier.size(13.dp)
                 )
-            )
+                Spacer(modifier = GlanceModifier.width(4.dp))
+                Text(
+                    text = "Toque para sincronizar",
+                    style = TextStyle(
+                        color = accentColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
         }
     }
 }

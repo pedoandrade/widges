@@ -2,9 +2,11 @@ package com.pedro.widgets.widget.photo
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -73,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import coil.compose.AsyncImage
+import com.pedro.widgets.R
 import com.pedro.widgets.data.model.PhotoShape
 import com.pedro.widgets.data.model.PhotoWidgetConfig
 import com.pedro.widgets.data.storage.PhotoStorage
@@ -97,8 +100,19 @@ class PhotoConfigActivity : ComponentActivity() {
             AppWidgetManager.INVALID_APPWIDGET_ID
         ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
 
+        // Ao abrir a personalização pelo app (sem ID), edita o widget de fotos existente.
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            appWidgetId = findFirstPhotoWidgetId()
+        }
+
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            Toast.makeText(this, R.string.photo_widget_missing, Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
         // Rejeita IDs de widgets que não pertencem a este aplicativo
-        if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID && !isOwnedWidget(appWidgetId)) {
+        if (!isOwnedWidget(appWidgetId)) {
             finish()
             return
         }
@@ -150,6 +164,13 @@ class PhotoConfigActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun findFirstPhotoWidgetId(): Int {
+        val manager = AppWidgetManager.getInstance(this)
+        return manager.getAppWidgetIds(
+            ComponentName(this, PhotoWidgetReceiver::class.java)
+        ).firstOrNull() ?: AppWidgetManager.INVALID_APPWIDGET_ID
     }
 
     private fun isOwnedWidget(widgetId: Int): Boolean {

@@ -352,7 +352,7 @@ fun MainScreen(
 
                                 if (eventsList.isEmpty() && !isLoadingEvents) {
                                     Text(
-                                        text = "Nenhum evento retornado ainda. Se você acabou de criar no Google Calendar, toque no botão 🔄 acima para forçar atualização.",
+                                        text = "Nenhum evento retornado ainda. Se você acabou de criar no Google Calendar, toque no botão de atualizar acima para forçar a sincronização.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error
                                     )

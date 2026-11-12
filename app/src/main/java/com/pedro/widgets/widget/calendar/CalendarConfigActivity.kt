@@ -3,10 +3,14 @@ package com.pedro.widgets.widget.calendar
 import android.Manifest
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,13 +37,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -60,30 +63,35 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.lifecycleScope
+import com.pedro.widgets.R
 import com.pedro.widgets.data.model.CalendarViewMode
 import com.pedro.widgets.data.model.CalendarWidgetConfig
 import com.pedro.widgets.data.storage.WidgetPreferences
 import com.pedro.widgets.ui.theme.WidgetsTheme
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CalendarConfigActivity : ComponentActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    private var previewJob: Job? = null
+    private var finishing = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,8 +104,19 @@ class CalendarConfigActivity : ComponentActivity() {
             AppWidgetManager.INVALID_APPWIDGET_ID
         ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
 
+        // Ao abrir a personalização pelo app (sem ID), edita o widget de agenda existente.
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            appWidgetId = findFirstCalendarWidgetId()
+        }
+
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            Toast.makeText(this, R.string.calendar_widget_missing, Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
         // Rejeita IDs de widgets que não pertencem a este aplicativo
-        if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID && !isOwnedWidget(appWidgetId)) {
+        if (!isOwnedWidget(appWidgetId)) {
             finish()
             return
         }
@@ -106,39 +125,105 @@ class CalendarConfigActivity : ComponentActivity() {
             WidgetsTheme {
                 CalendarConfigScreen(
                     widgetId = appWidgetId,
-                    onSave = { config ->
-                        val scope = CoroutineScope(Dispatchers.IO)
-                        scope.launch {
-                            val prefs = WidgetPreferences(this@CalendarConfigActivity)
-                            prefs.saveCalendarConfig(config)
-
-                            // Atualizar widget via Glance
-                            try {
-                                val glanceManager = GlanceAppWidgetManager(this@CalendarConfigActivity)
-                                val glanceId = glanceManager.getGlanceIdBy(appWidgetId)
-                                CalendarWidget().update(this@CalendarConfigActivity, glanceId)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-
-                            val resultValue = Intent().apply {
-                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                            }
-                            setResult(Activity.RESULT_OK, resultValue)
-                            finish()
-                        }
-                    },
-                    onCancel = {
-                        finish()
-                    }
+                    onSave = { config -> saveAndFinish(config) },
+                    onPreviewChange = { config -> applyPreview(config) },
+                    onCancel = { original -> cancelAndFinish(original) }
                 )
             }
         }
     }
 
+    /**
+     * Salva a configuração e atualiza o widget imediatamente, sem esperar o próximo ciclo
+     * periódico do launcher (updatePeriodMillis).
+     */
+    private fun saveAndFinish(config: CalendarWidgetConfig) {
+        if (finishing) return
+        finishing = true
+        previewJob?.cancel()
+
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                WidgetPreferences(this@CalendarConfigActivity).saveCalendarConfig(config)
+                updateCalendarWidget()
+            }
+
+            val resultValue = Intent().apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+            setResult(Activity.RESULT_OK, resultValue)
+            finish()
+        }
+    }
+
+    /**
+     * Aplica mudanças de aparência (como a transparência) no widget enquanto o usuário ainda
+     * está na tela de configuração.
+     */
+    private fun applyPreview(config: CalendarWidgetConfig) {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+
+        previewJob?.cancel()
+        previewJob = lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                WidgetPreferences(this@CalendarConfigActivity).saveCalendarConfig(config)
+                updateCalendarWidget()
+            }
+        }
+    }
+
+    /**
+     * Como as prévias são salvas em tempo real, restaura a configuração original ao cancelar.
+     */
+    private fun cancelAndFinish(originalConfig: CalendarWidgetConfig?) {
+        if (finishing) return
+        finishing = true
+        previewJob?.cancel()
+
+        if (originalConfig == null || appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            finish()
+            return
+        }
+
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                WidgetPreferences(this@CalendarConfigActivity).saveCalendarConfig(originalConfig)
+                updateCalendarWidget()
+            }
+            finish()
+        }
+    }
+
+    private suspend fun updateCalendarWidget() {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+
+        val glanceManager = GlanceAppWidgetManager(this)
+        val glanceId = runCatching { glanceManager.getGlanceIdBy(appWidgetId) }.getOrNull()
+
+        if (glanceId != null) {
+            runCatching { CalendarWidget().update(this, glanceId) }
+                .onFailure { Log.e(TAG, "Falha ao atualizar o widget de agenda", it) }
+        } else {
+            // Fallback: atualiza todas as instâncias, cada uma com sua própria configuração.
+            runCatching { CalendarWidget().updateAll(this) }
+                .onFailure { Log.e(TAG, "Falha ao atualizar os widgets de agenda", it) }
+        }
+    }
+
+    private fun findFirstCalendarWidgetId(): Int {
+        val manager = AppWidgetManager.getInstance(this)
+        return manager.getAppWidgetIds(
+            ComponentName(this, CalendarWidgetReceiver::class.java)
+        ).firstOrNull() ?: AppWidgetManager.INVALID_APPWIDGET_ID
+    }
+
     private fun isOwnedWidget(widgetId: Int): Boolean {
         val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId) ?: return false
         return info.provider?.packageName == packageName
+    }
+
+    private companion object {
+        const val TAG = "CalendarConfigActivity"
     }
 }
 
@@ -158,10 +243,10 @@ private val presetColors = listOf(
 fun CalendarConfigScreen(
     widgetId: Int,
     onSave: (CalendarWidgetConfig) -> Unit,
-    onCancel: () -> Unit
+    onPreviewChange: (CalendarWidgetConfig) -> Unit,
+    onCancel: (CalendarWidgetConfig?) -> Unit
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val prefs = remember { WidgetPreferences(context) }
 
     var useDynamicColors by remember { mutableStateOf(true) }
@@ -172,6 +257,10 @@ fun CalendarConfigScreen(
     var viewMode by remember { mutableStateOf(CalendarViewMode.AGENDA_LIST) }
     var maxEvents by remember { mutableIntStateOf(5) }
     var showPastEvents by remember { mutableStateOf(false) }
+
+    var isLoaded by remember { mutableStateOf(false) }
+    var originalConfig by remember { mutableStateOf<CalendarWidgetConfig?>(null) }
+    var skipLiveUpdate by remember { mutableStateOf(true) }
 
     var hasPermission by remember {
         mutableStateOf(
@@ -192,6 +281,7 @@ fun CalendarConfigScreen(
     LaunchedEffect(widgetId) {
         if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             val existing = prefs.getCalendarConfig(widgetId)
+            originalConfig = existing
             useDynamicColors = existing.useDynamicColors
             backgroundColor = existing.backgroundColor
             backgroundAlpha = existing.backgroundAlpha
@@ -201,6 +291,45 @@ fun CalendarConfigScreen(
             maxEvents = existing.maxEvents
             showPastEvents = existing.showPastEventsToday
         }
+        isLoaded = true
+    }
+
+    fun buildConfig() = CalendarWidgetConfig(
+        widgetId = widgetId,
+        useDynamicColors = useDynamicColors,
+        backgroundColor = backgroundColor,
+        backgroundAlpha = backgroundAlpha,
+        cornerRadiusDp = cornerRadius,
+        borderWidthDp = borderWidth,
+        borderColor = 0x33FFFFFFL,
+        viewMode = viewMode,
+        maxEvents = maxEvents,
+        showPastEventsToday = showPastEvents
+    )
+
+    // Reflete alterações visuais no widget quase em tempo real, sem precisar fechar a tela.
+    LaunchedEffect(
+        isLoaded,
+        useDynamicColors,
+        backgroundColor,
+        backgroundAlpha,
+        cornerRadius,
+        borderWidth,
+        viewMode,
+        maxEvents,
+        showPastEvents
+    ) {
+        if (!isLoaded) return@LaunchedEffect
+        if (skipLiveUpdate) {
+            skipLiveUpdate = false
+            return@LaunchedEffect
+        }
+        delay(150)
+        onPreviewChange(buildConfig())
+    }
+
+    BackHandler {
+        onCancel(originalConfig)
     }
 
     Scaffold(
@@ -224,27 +353,13 @@ fun CalendarConfigScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
-                        onClick = onCancel,
+                        onClick = { onCancel(originalConfig) },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Cancelar")
                     }
                     Button(
-                        onClick = {
-                            val config = CalendarWidgetConfig(
-                                widgetId = widgetId,
-                                useDynamicColors = useDynamicColors,
-                                backgroundColor = backgroundColor,
-                                backgroundAlpha = backgroundAlpha,
-                                cornerRadiusDp = cornerRadius,
-                                borderWidthDp = borderWidth,
-                                borderColor = 0x33FFFFFFL,
-                                viewMode = viewMode,
-                                maxEvents = maxEvents,
-                                showPastEventsToday = showPastEvents
-                            )
-                            onSave(config)
-                        },
+                        onClick = { onSave(buildConfig()) },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Salvar Widget")
@@ -509,13 +624,14 @@ private fun LiveCalendarPreview(
     viewMode: CalendarViewMode
 ) {
     val bgCol = if (useDynamicColors) {
-        MaterialTheme.colorScheme.surface.copy(alpha = backgroundAlpha)
+        // Equivalente aproximado do token widgetBackground do Glance no Compose.
+        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = backgroundAlpha)
     } else {
         Color(backgroundColor).copy(alpha = backgroundAlpha)
     }
 
     val primaryTextColor = if (useDynamicColors) {
-        MaterialTheme.colorScheme.onSurface
+        MaterialTheme.colorScheme.onSecondaryContainer
     } else {
         Color.White
     }
@@ -567,7 +683,7 @@ private fun LiveCalendarPreview(
                             .background(accentColor)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Quarta-feira",
                             color = primaryTextColor,
@@ -578,6 +694,20 @@ private fun LiveCalendarPreview(
                             text = "11 de Novembro",
                             color = secondaryTextColor,
                             fontSize = 12.sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(secondaryTextColor.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Atualizar agenda",
+                            tint = secondaryTextColor,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

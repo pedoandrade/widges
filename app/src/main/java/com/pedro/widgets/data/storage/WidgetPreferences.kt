@@ -1,6 +1,7 @@
 package com.pedro.widgets.data.storage
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -12,6 +13,8 @@ import com.pedro.widgets.data.model.CalendarViewMode
 import com.pedro.widgets.data.model.CalendarWidgetConfig
 import com.pedro.widgets.data.model.PhotoShape
 import com.pedro.widgets.data.model.PhotoWidgetConfig
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -37,33 +40,45 @@ class WidgetPreferences(private val context: Context) {
     }
 
     suspend fun getCalendarConfig(widgetId: Int): CalendarWidgetConfig {
-        return context.dataStore.data.map { prefs ->
-            val dynamic = prefs[booleanPreferencesKey("cal_dynamic_$widgetId")] ?: true
-            val bgColor = prefs[longPreferencesKey("cal_bg_color_$widgetId")] ?: 0xFF1C1B1FL
-            val bgAlpha = prefs[floatPreferencesKey("cal_bg_alpha_$widgetId")] ?: 0.85f
-            val cornerRadius = prefs[intPreferencesKey("cal_corner_radius_$widgetId")] ?: 24
-            val borderWidth = prefs[intPreferencesKey("cal_border_width_$widgetId")] ?: 1
-            val borderColor = prefs[longPreferencesKey("cal_border_color_$widgetId")] ?: 0x33FFFFFFL
-            val viewModeStr = prefs[stringPreferencesKey("cal_view_mode_$widgetId")]
-            val viewMode = if (viewModeStr != null) {
-                try { CalendarViewMode.valueOf(viewModeStr) } catch (e: Exception) { CalendarViewMode.AGENDA_LIST }
-            } else CalendarViewMode.AGENDA_LIST
-            val maxEvents = prefs[intPreferencesKey("cal_max_events_$widgetId")] ?: 5
-            val showPast = prefs[booleanPreferencesKey("cal_show_past_$widgetId")] ?: false
+        return calendarConfigFlow(widgetId).first()
+    }
 
-            CalendarWidgetConfig(
-                widgetId = widgetId,
-                useDynamicColors = dynamic,
-                backgroundColor = bgColor,
-                backgroundAlpha = bgAlpha,
-                cornerRadiusDp = cornerRadius,
-                borderWidthDp = borderWidth,
-                borderColor = borderColor,
-                viewMode = viewMode,
-                maxEvents = maxEvents,
-                showPastEventsToday = showPast
-            )
-        }.first()
+    /**
+     * Fluxo reativo da configuração. O widget o observa para refletir ajustes (opacidade,
+     * cores, formato) imediatamente, sem depender de uma nova sessão do Glance.
+     */
+    fun calendarConfigFlow(widgetId: Int): Flow<CalendarWidgetConfig> {
+        return context.dataStore.data
+            .map { prefs -> prefs.toCalendarConfig(widgetId) }
+            .distinctUntilChanged()
+    }
+
+    private fun Preferences.toCalendarConfig(widgetId: Int): CalendarWidgetConfig {
+        val dynamic = this[booleanPreferencesKey("cal_dynamic_$widgetId")] ?: true
+        val bgColor = this[longPreferencesKey("cal_bg_color_$widgetId")] ?: 0xFF1C1B1FL
+        val bgAlpha = this[floatPreferencesKey("cal_bg_alpha_$widgetId")] ?: 0.85f
+        val cornerRadius = this[intPreferencesKey("cal_corner_radius_$widgetId")] ?: 24
+        val borderWidth = this[intPreferencesKey("cal_border_width_$widgetId")] ?: 1
+        val borderColor = this[longPreferencesKey("cal_border_color_$widgetId")] ?: 0x33FFFFFFL
+        val viewModeStr = this[stringPreferencesKey("cal_view_mode_$widgetId")]
+        val viewMode = if (viewModeStr != null) {
+            try { CalendarViewMode.valueOf(viewModeStr) } catch (e: Exception) { CalendarViewMode.AGENDA_LIST }
+        } else CalendarViewMode.AGENDA_LIST
+        val maxEvents = this[intPreferencesKey("cal_max_events_$widgetId")] ?: 5
+        val showPast = this[booleanPreferencesKey("cal_show_past_$widgetId")] ?: false
+
+        return CalendarWidgetConfig(
+            widgetId = widgetId,
+            useDynamicColors = dynamic,
+            backgroundColor = bgColor,
+            backgroundAlpha = bgAlpha,
+            cornerRadiusDp = cornerRadius,
+            borderWidthDp = borderWidth,
+            borderColor = borderColor,
+            viewMode = viewMode,
+            maxEvents = maxEvents,
+            showPastEventsToday = showPast
+        )
     }
 
     // --- Photo Config ---
