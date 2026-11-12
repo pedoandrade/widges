@@ -96,6 +96,12 @@ class CalendarConfigActivity : ComponentActivity() {
             AppWidgetManager.INVALID_APPWIDGET_ID
         ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
 
+        // Rejeita IDs de widgets que não pertencem a este aplicativo
+        if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID && !isOwnedWidget(appWidgetId)) {
+            finish()
+            return
+        }
+
         setContent {
             WidgetsTheme {
                 CalendarConfigScreen(
@@ -128,6 +134,11 @@ class CalendarConfigActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun isOwnedWidget(widgetId: Int): Boolean {
+        val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId) ?: return false
+        return info.provider?.packageName == packageName
     }
 }
 

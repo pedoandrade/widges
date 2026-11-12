@@ -114,9 +114,14 @@ fun PhotoWidgetContent(
     } else if (currentPath != null) {
         // Tentar abrir a imagem em visualizador externo
         val file = File(currentPath)
+        val photoUri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.photos",
+            file
+        )
         val viewIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(android.net.Uri.fromFile(file), "image/*")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            setDataAndType(photoUri, "image/*")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
         }
         GlanceModifier.clickable(actionStartActivity(viewIntent))
     } else {

@@ -13,6 +13,7 @@ import com.pedro.widgets.data.storage.WidgetPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 
 class PhotoWidgetReceiver : GlanceAppWidgetReceiver() {
 
@@ -38,6 +39,16 @@ class PhotoWidgetReceiver : GlanceAppWidgetReceiver() {
                         rotateWidget(context, prefs, glanceManager, widgetId)
                     }
                 }
+            }
+        }
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        // Remove as cópias das fotos quando o widget é excluído
+        CoroutineScope(Dispatchers.IO).launch {
+            appWidgetIds.forEach { widgetId ->
+                File(context.filesDir, "widget_photos/$widgetId").deleteRecursively()
             }
         }
     }
