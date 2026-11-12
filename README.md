@@ -1,93 +1,165 @@
-# 📱 Widgets para Android (Material You & Dynamic Colors)
+# Widgets para Android
 
-Aplicativo Android ultraleve focado em alta fidelidade estética e widgets modernos para a tela inicial, desenvolvido em **Kotlin**, **Jetpack Glance** e **Jetpack Compose + Material 3**. Suporte nativo à paleta de cores dinâmica do sistema (**Material You / Monet Engine**) do Android 12 ao **Android 17**.
+**Widgets de tela inicial bonitos e ultraleves — Material You, totalmente offline e sem rastreamento.**
 
----
+Widgets é um aplicativo Android pequeno e focado em privacidade que leva widgets elegantes e personalizáveis para a sua tela inicial. Ele vem com um widget de agenda do Google Calendar e um widget de porta-retratos, e foi feito para não atrapalhar: sem contas, sem anúncios, sem analytics — e sem a permissão `INTERNET`.
 
-## ✨ Recursos Principais
+![Platform](https://img.shields.io/badge/Android-12%2B-3DDC84?logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack-Compose-4285F4?logo=jetpackcompose&logoColor=white)
+![Jetpack Glance](https://img.shields.io/badge/Jetpack-Glance-34A853)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-### 📅 1. Widget de Agenda Dinâmica (Google Calendar)
-Sincronizado diretamente com a sua conta Google no dispositivo através do `CalendarContract` do Android (sem sobrecarga de APIs em nuvem, rápido e offline-first).
-
-- **Material You (Dynamic Colors)**: Acompanha automaticamente as cores extraídas do papel de parede do sistema e dos ícones temáticos do Android.
-- **Transparência / Vidro**: Controle deslizante de opacidade de 0% (vidro total) a 100% (sólido).
-- **Formatos e Bordas**: Ajuste do raio dos cantos (de 0dp a 32dp pílula) e espessura do contorno.
-- **Modos de Visualização**:
-  - *Lista de Compromissos*: Visão ordenada por horário com cores da agenda.
-  - *Destaque do Próximo Evento*: Exibição tipográfica elegante com contagem e local.
-- **Sincronização em Tempo Real**: Observador nativo do sistema que atualiza os eventos automaticamente ao criar ou editar na Agenda do Google.
-- **Botão de Atualização Rápida (🔄)**: Ícone discreto no widget para forçar a atualização a qualquer momento.
-- **Ação por Toque**: Tocar em qualquer compromisso abre a Agenda do Google diretamente na tela do evento.
+> 🇺🇸 [Read this page in English](README.en.md)
 
 ---
 
-### 🖼️ 2. Widget de Porta-Retratos (Fotos Personalizadas)
-Exiba suas fotos favoritas com suporte a rotação inteligente e múltiplos formatos estéticos.
+## ✨ Destaques
 
-- **Seleção Nativa**: Utiliza o **Android Photo Picker** do sistema, sem necessidade de permissões invasivas de leitura de arquivos.
-- **Formatos Personalizados**:
-  - Retangular com cantos arredondados configuráveis.
-  - Círculo / Oval.
-  - Squircle moderno.
-  - Moldura externa (*passe-partout*) com suporte a cores do Material You.
-- **Rotação Automática de Múltiplas Fotos**:
-  - **Ao Desbloquear a Tela**: Muda para a próxima foto automaticamente cada vez que você liga/desbloqueia o celular.
-  - **Intervalos de Tempo**: Temporizador configurável (15 min, 30 min, 1 hora, 6 horas, Diário 24h).
-  - **Toque Direto**: Toque na foto para alternar imediatamente para a imagem seguinte.
-- **Design Limpo**: Sem números ou contadores sobrepostos na imagem.
-- **Otimização de Memória**: Compressão automática e cache interno respeitando os limites estritos de IPC do Android RemoteViews.
+- **Material You** — os widgets acompanham as cores dinâmicas extraídas do papel de parede e dos ícones temáticos no Android 12+.
+- **Pegada mínima** — cerca de 3 MB na versão release, sem serviços sempre ativos e sem polling.
+- **Privacidade por padrão** — o app não tem permissão de internet, então seus dados fisicamente não podem sair do aparelho.
+- **Economia de bateria** — as atualizações são guiadas por eventos do sistema (mudanças na agenda, desbloqueio da tela, alarmes), não por sincronização em segundo plano.
+- **Feito para crescer** — arquitetura modular e limpa. Novos módulos de widget são muito bem-vindos.
 
----
+## 🧩 Widgets incluídos
 
-## 🛠️ Tecnologias Utilizadas
+### 🗓️ Agenda
 
-| Tecnologia | Finalidade |
-| :--- | :--- |
-| **Kotlin 2.x** | Linguagem principal do projeto |
-| **Jetpack Glance** (`glance-appwidget`, `glance-material3`) | Criação declarativa moderna dos widgets |
-| **Jetpack Compose + Material 3** | Interface de configuração e pré-visualização em tempo real |
-| **Coil** | Carregamento assíncrono e ultra-eficiente de imagens |
-| **Jetpack DataStore** | Armazenamento reativo e assíncrono das preferências por widget |
-| **R8 Compiler** | Otimização de código e redução do APK para apenas **3.2 MB** |
+Um widget de agenda personalizável que lê seus calendários diretamente no dispositivo através do `CalendarContract` — sem API em nuvem, sem fluxo de login e sem latência.
 
----
+- Layout em lista de compromissos ou em *próximo evento*
+- Opacidade do fundo ajustável (de vidro total a sólido), raio dos cantos e contorno
+- Atualização automática quando os eventos mudam no aparelho
+- Botão opcional de atualização rápida e toque no evento para abri-lo no app de agenda
+- Funciona offline com os calendários já sincronizados no celular
+- Requer apenas `READ_CALENDAR`
 
-## 🚀 Como Executar o Projeto
+### 🖼️ Porta-retratos
 
-### Pré-requisitos
-- **Android Studio** (versão Ladybug / Meerkat / Koala ou superior)
-- **Android SDK** com suporte a API 31 até API 35/37
-- **JDK 17** ou superior
+Um widget de fotos elegante, sem contadores ou badges sobre as suas imagens.
 
-### Passos
-1. Clone este repositório:
-   ```bash
-   git clone https://github.com/pedoandrade/widges.git
-   cd widges
-   ```
-2. Abra o projeto no **Android Studio**:
-   - Vá em `File` > `Open...` e selecione a pasta do projeto.
-3. Conecte seu smartphone Android ou inicie um emulador.
-4. Clique em **Run ▶** (`Shift + F10`) para compilar e instalar o app.
+- Seletor nativo de fotos do Android (Photo Picker) — sem permissões de armazenamento
+- Formatos retangular arredondado, squircle e círculo/oval
+- Moldura externa (*passe-partout*) opcional com cores do Material You
+- Rotação a cada desbloqueio, por temporizador (15 min → 24 h) ou ao toque
+- As fotos são redimensionadas e copiadas para o armazenamento interno privado, sendo compartilhadas apenas quando você toca para abri-las (concessão temporária via `FileProvider`)
 
----
+## 📸 Capturas de tela
 
-## 📦 Compilação via Linha de Comando
+| Agenda | Porta-retratos |
+| :---: | :---: |
+| <img src="imgs/widget_agenda_preview.svg" width="260" alt="Prévia do widget de agenda" /> | <img src="imgs/widget_retrato_preview.svg" width="260" alt="Prévia do widget de porta-retratos" /> |
+
+## 📱 Requisitos
+
+- Android 12 (API 31) ou superior — desenvolvido e testado com o comportamento do Android 15/16/17
+- Compilado com `minSdk 31` / `targetSdk 35`
+
+## 🚀 Compilando do código-fonte
+
+Você precisa de **JDK 17** e do **Android SDK** (platform 35).
 
 ```bash
-# Compilar APK de depuração
+git clone https://github.com/pedoandrade/widges.git
+cd widges
 ./gradlew assembleDebug
+```
 
-# Compilar APK final minificado (release)
+O APK é gerado em `app/build/outputs/apk/debug/app-debug.apk`, ou abra o projeto no Android Studio e pressione **Run**.
+
+Para gerar a versão release minificada:
+
+```bash
 ./gradlew assembleRelease
 ```
 
-Os APKs gerados estarão em:
-- Debug: `app/build/outputs/apk/debug/app-debug.apk`
-- Release: `app/build/outputs/apk/release/app-release-unsigned.apk`
+A assinatura de release é configurada por um arquivo local `keystore.properties` (ignorado pelo Git):
 
----
+```properties
+storeFile=keystore/your-release.keystore
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
+## 🏗️ Arquitetura
+
+```text
+app/src/main/java/com/pedro/widgets/
+├── data/
+│   ├── model/          # Modelos de configuração por widget
+│   ├── repository/     # Consultas locais ao CalendarContract
+│   └── storage/        # Preferências em DataStore + armazenamento privado de fotos
+├── ui/theme/           # Tema Compose Material 3
+└── widget/
+    ├── calendar/       # Widget Glance, tela de configuração e receiver
+    └── photo/          # Widget Glance, tela de configuração e receiver
+```
+
+- **Jetpack Glance** renderiza os widgets; **Compose + Material 3** alimenta as telas de configuração.
+- As preferências são armazenadas por `appWidgetId` no Jetpack DataStore.
+- As fotos são decodificadas com amostragem, redimensionadas e salvas no armazenamento interno — nunca no armazenamento compartilhado.
+- As telas de configuração validam se o `appWidgetId` recebido pertence a este aplicativo.
+- Os receivers dos widgets não são exportados e todos os intents de clique são restritos.
+
+### Tecnologias
+
+| Camada | Tecnologia |
+| :--- | :--- |
+| Linguagem | Kotlin 2.x |
+| Widgets | Jetpack Glance, Glance Material 3 |
+| Interface de configuração | Jetpack Compose, Material 3 |
+| Preferências | Jetpack DataStore |
+| Imagens | Coil (arquivos locais) |
+| Minificação | R8 |
+
+## 🤝 Contribuindo
+
+Contribuições são muito bem-vindas — especialmente **novos módulos de widget**. Este projeto foi pensado para ser um espaço pequeno e amigável para construir widgets leves e que respeitam a privacidade.
+
+1. Faça um fork do repositório e crie uma branch: `git checkout -b feat/clock-widget`
+2. Construa seu módulo seguindo o padrão dos widgets de agenda e de fotos.
+3. Teste em um aparelho ou emulador Android 12+ (níveis de API mais recentes são um diferencial).
+4. Abra um pull request descrevendo o widget, suas opções de configuração e capturas de tela.
+
+### Regras do projeto
+
+- **Privacidade em primeiro lugar.** Não adicione a permissão `INTERNET`, SDKs de anúncios/analytics ou novas permissões perigosas sem discutir antes em uma issue.
+- **Mantenha leve.** Evite polling, serviços em primeiro plano e dependências pesadas.
+- **Armazene dados privados internamente.** Nunca grave mídia do usuário ou preferências no armazenamento compartilhado/externo.
+- **Sem componentes exportados.** Receivers de widget permanecem `exported="false"`; telas de configuração validam o ID do widget.
+- Siga o estilo Kotlin/Compose existente e mantenha os textos de interface em `strings.xml`.
+
+### Checklist de um novo módulo
+
+- [ ] `GlanceAppWidget` + `GlanceAppWidgetReceiver`
+- [ ] XML `appwidget-provider` com `widgetFeatures="reconfigurable"`
+- [ ] Tela de configuração em Compose com pré-visualização ao vivo
+- [ ] Validação de propriedade do `appWidgetId`
+- [ ] Preferências por widget em `WidgetPreferences`
+- [ ] Limpeza de arquivos criados pelo widget ao excluí-lo (`onDeleted`)
+- [ ] Imagem de prévia, ícone, strings e conferência dos temas claro/escuro
+
+### Ideias de novos módulos
+
+Relógio, bateria, notas, rastreador de hábitos, contagem regressiva, relógio mundial, ações rápidas, monitor de armazenamento, controles de mídia, clima local (exigiria um design de rede opt-in — abra uma issue primeiro).
+
+## 🗺️ Roadmap
+
+- Mais módulos nativos
+- Presets de tema compartilhados entre widgets
+- Exportação/importação local de layouts de widget iniciada pelo usuário
+- Traduções da comunidade
+
+## 🔐 Privacidade
+
+- Sem permissão `INTERNET` — o app não consegue enviar nada.
+- Os dados da agenda são lidos localmente e nunca persistidos; apenas os seus próprios calendários são consultados com `READ_CALENDAR`.
+- As fotos são selecionadas pelo Photo Picker do sistema e copiadas para o armazenamento interno privado.
+- O backup automático do Android está desativado, então fotos e preferências dos widgets não são enviadas para backup em nuvem ou transferência entre aparelhos por este app.
+- Sem anúncios, sem analytics, sem rastreadores e sem coleta de dados por terceiros.
 
 ## 📄 Licença
 
-Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
+Distribuído sob a licença **MIT**. Veja [`LICENSE`](LICENSE) para mais detalhes.
